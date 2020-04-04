@@ -4,16 +4,14 @@ import com.github.jurajburian.mailer._
 import javax.mail.Session
 import javax.mail.internet.InternetAddress
 
-object MailSender {
-
-  private val credentials = "your_mail_sender@gmail.com" -> "your_gmail_password"
+case class MailSender(sender: (String, String), receivers: Set[String]) {
 
   private def session: Session =
     (SessionFactory() + SmtpStartTls() + SmtpAddress("smtp.gmail.com", 587))
-      .session(Some(credentials))
+      .session(Some(sender))
 
-  val senderAddress = new InternetAddress(MailSender.credentials._1)
-  val receiverAddress = new InternetAddress("your_mail_receiver@xyz.com")
+  val senderAddress: InternetAddress = new InternetAddress(sender._1)
+  val receiverAddresses: Set[InternetAddress] = receivers.map(new InternetAddress(_))
 
   def send(message: Message) = {
     try {
@@ -23,4 +21,15 @@ object MailSender {
       case e: Throwable => e.printStackTrace()
     }
   }
+}
+
+object MailSender {
+
+  var instance: Option[MailSender] = None
+
+  def init(sender: (String, String), receivers: Set[String]): Unit =
+    instance = Some(MailSender(sender, receivers))
+
+  def get: MailSender =
+    instance.getOrElse(throw new RuntimeException("Mail sender is not initialized"))
 }
